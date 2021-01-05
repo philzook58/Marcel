@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MathJax TeX Test Page</title>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+</head>
+<body>
+When \(a \ne 0\), there are two solutions to \(ax^2 + bx + c = 0\) and they are
+$$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+
+$$\color{red}{x} + \color{blue}{y}$$
+
+$$\begin{prooftree}
+\AxiomC{}
+\RightLabel{Hyp$^{1}$}
+\UnaryInfC{$P$}
+\AXC{$P\to Q$}
+\RL{$\to_E$}
+\BIC{$Q^2$}
+\AXC{$Q\to R$}
+\RL{$\to_E$}
+\BIC{$R$}
+\AXC{$Q$}
+\RL{Rit$^2$}
+\UIC{$Q$}
+\RL{$\wedge_I$}
+\BIC{$Q\wedge R$}
+\RL{$\to_I$$^1$}
+\UIC{$P\to Q\wedge R$}
+\end{prooftree}$$
+
+
+$$ \cssId{test}{click me}$$
+
+<div id="output"> </div>
+</body>
+
+<script>
+window.MathJax = {
+  loader: {load: ['[tex]/color', '[tex]/html']},
+  tex: {packages: {'[+]': ['color', 'html']}},
+  startup: {
+      ready : () => {
+
+          MathJax.startup.defaultReady();
+          MathJax.startup.promise.then(() => {
+            document.getElementById("test").onclick = ev => alert("it works");
+            console.log('MathJax initial typesetting complete');
+            });
+
+          console.log("didi it");
+
+        }}
+  };
+
+
+let counter = 0;
+
+function fresh(f){
+    counter += 1;
+    return f(counter);
+}
+
+// Formula constructors
+let Atom = a => {
+    counter += 1;
+    return {tag: "Atom", id : counter, p : a};
+}
+let Conj = (a,b) => {
+    counter += 1;
+    return {tag: "Conj", id : counter, p : a, q : b};
+};
+
+// Seq
+let Sequent = (l,r) => {
+    return {tag : "Sequent", hyps : l, concs : r};
+}
+
+
+
+// Proof Constructors
+let Ax = seq => { return {tag : "Ax", seq : seq }; }
+
+let Goal = seq => {
+    return {tag : "Goal", seq : seq};
+}
+
+// Hmm. Maybe this should be a smart constructor
+/*
+let RAnd = (seq,i) => {   
+    let t = seq.concs[i];
+    if (t.tag != "Conj") {
+        throw Error("expected And node in RAnd");
+    }
+    let seql = seq.concs.splice(i,1, t.p)
+    let seqr = seq.concs.splice(i,1, t.q)
+    return {tag : "RAnd", seq : seq, l : Goal(seql), r : Goal(seqr)};
+  }
+*/
+
+// is freshening necessary. We could make ids as we 
+let deepcopy = object => freshen(JSON.parse(JSON.stringify(object)));
+
+let RAnd = (seq, l, r) => {
+    return {tag : "RAnd", seq : seq, l : l, r : r};
+}
+let LAnd = null;
+
+// copy, then traverse with new ids.
+function freshen() {
+
+}
+// traverse function. go down each node and hand off self to visitor functor.
+// fold? map?
+
+
+function pretty(formula){
+    switch(formula.tag){
+        case "Conj" :
+            return `${pretty(formula.p)} 
+                    \\cssId{flimby${formula.id}}{\\land}
+                    ${pretty(formula.q)}`;
+        case "Atom" : 
+            return `\\cssId{flimby${formula.id}}{${formula.p}}`;
+        case "Sequent": // should go in it's own function
+            return `${ formula.hyps.map(pretty) } \\vdash ${ formula.concs.map(pretty)}`;
+        case "Ax" :
+            return `\\AxiomC{}
+                    \\UnaryInfC{$${ pretty(formula.seq) }$}`
+        case "RAnd" :
+            return `${pretty(formula.l)} 
+                    ${pretty(formula.r)} 
+                    \\BinaryInfC{$${ pretty(formula.seq) }$}`
+    };
+}
+
+let p = Atom("p");
+let q = Atom("q");
+let ex = Conj(p,q);
+console.log(ex);
+console.log(pretty(ex));
+let ex2 = Sequent([p],[p]);
+console.log(pretty(ex2));
+
+//document.getElementById("output").innerHTML = `$$${pretty(ex2)}$$`;
+let pf1 = Ax(ex2);
+document.getElementById("output").innerHTML = `$$\\begin{prooftree}${pretty(pf1)}\\end{prooftree}$$`;
+
+let goal1 = Sequent([p,q], [Conj(p,q)]);
+let pf2 = RAnd(goal1, Ax( Sequent([p,q], [p]) ) , Ax( Sequent([p,q], [q]) ) );
+
+function print_proof(pf){
+    return `$$\\begin{prooftree}${pretty(pf)}\\end{prooftree}$$`
+}
+
+document.getElementById("output").innerHTML = print_proof(pf2);
+
+
+
+</script>
+</html>
